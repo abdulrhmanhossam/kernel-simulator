@@ -1,31 +1,34 @@
 ﻿using KernelSimulator.Models;
-using KernelSimulator.Models.Enums;
 
 namespace KernelSimulator.Services;
 
 public class SchedulerService
 {
-    private readonly Queue<Process> _readyQueue = new();
+    private readonly List<Process> _readyProcesses = new();
 
     public void EnqueueProcess(Process process)
     {
-        if (process.State == ProcessState.Ready)
-            _readyQueue.Enqueue(process);
+        _readyProcesses.Add(process);
     }
 
     public Process? DequeueNextProcess()
     {
-        if (_readyQueue.Any())
-            return _readyQueue.Dequeue();
+        if (!_readyProcesses.Any())
+            return null;
 
-        return null;
+        var nextProcess = _readyProcesses
+            .OrderBy(p => p.Priority)
+            .First();
+
+        _readyProcesses.Remove(nextProcess);
+        return nextProcess;
     }
     public IReadOnlyCollection<Process> GetReadyProcesses()
     {
-        return _readyQueue.ToList().AsReadOnly();
+        return _readyProcesses.AsReadOnly();
     }
 
-    public int ReadyCount() => _readyQueue.Count;
+    public int ReadyCount() => _readyProcesses.Count;
 
-    public void Clear() => _readyQueue.Clear();
+    public void Clear() => _readyProcesses.Clear();
 }
