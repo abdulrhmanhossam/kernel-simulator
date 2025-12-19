@@ -1,0 +1,9 @@
+@KernelSimulator_HostAddress = http://localhost:5078
+
+GET {{KernelSimulator_HostAddress}}/weatherforecast/
+Accept: application/json
+
+GET {{KernelSimulator_HostAddress}}/Su/
+Accept: application/json
+
+###
