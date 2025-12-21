@@ -11,9 +11,8 @@ public class SimulationService
     private int _currentQuantumCounter = 0;
     private readonly List<string> _logs = new();
     private readonly SchedulerService _scheduler;
-
     private Process? _currentProcess;
-
+    private readonly List<Process> _blockedProcesses = new();
     public int CurrentTick { get; private set; }
 
     public SimulationService(SchedulerService scheduler)
@@ -30,6 +29,8 @@ public class SimulationService
     {
         CurrentTick++;
         _logs.Add($"Tick {CurrentTick} started.");
+
+        HandleBlockedProcesses();
 
         if (_currentProcess == null)
         {
@@ -48,6 +49,23 @@ public class SimulationService
 
         _currentProcess.RemainingTime--;
         _currentQuantumCounter++;
+
+        if (_currentProcess.IoRequestAtTick.HasValue &&
+                CurrentTick == _currentProcess.IoRequestAtTick.Value)
+        {
+            _currentProcess.State = ProcessState.Blocked;
+            _currentProcess.IoRemainingTime = _currentProcess.IoBlockingTime;
+
+            _blockedProcesses.Add(_currentProcess);
+
+            _logs.Add(
+                $"Process {_currentProcess.Name} requested I/O and moved to Blocked."
+            );
+
+            _currentProcess = null;
+            _currentQuantumCounter = 0;
+            return;
+        }
 
         _logs.Add(
             $"Process {_currentProcess.Name} executed. Remaining time: {_currentProcess.RemainingTime}"
@@ -120,5 +138,24 @@ public class SimulationService
         _currentQuantumCounter = 0;
         _logs.Clear();
         _scheduler.Clear();
+    }
+
+    private void HandleBlockedProcesses()
+    {
+        foreach (var process in _blockedProcesses.ToList())
+        {
+            process.IoRemainingTime--;
+
+            if (process.IoRemainingTime <= 0)
+            {
+                process.State = ProcessState.Ready;
+                _blockedProcesses.Remove(process);
+                _scheduler.EnqueueProcess(process);
+
+                _logs.Add(
+                    $"Process {process.Name} finished I/O and moved to Ready."
+                );
+            }
+        }
     }
 }

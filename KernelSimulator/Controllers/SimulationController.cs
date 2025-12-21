@@ -19,7 +19,8 @@ public class SimulationController : ControllerBase
     [HttpPost("process")]
     public IActionResult CreateProcess([FromBody] CreateProcessRequestDto requestDto)
     {
-        var process = new Process(requestDto.Id, requestDto.Name, requestDto.BurstTime, requestDto.Priority);
+        var process = new Process(requestDto.Id, requestDto.Name, requestDto.BurstTime,
+            requestDto.Priority, requestDto.IoRequestAtTick, requestDto.IoBlockingTime);
 
         _simulation.AddProcess(process);
 
