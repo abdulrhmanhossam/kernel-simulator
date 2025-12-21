@@ -1,5 +1,5 @@
 ﻿using KernelSimulator.Dtos;
-using KernelSimulator.Models;
+using KernelSimulator.Factories;
 using KernelSimulator.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,9 +19,7 @@ public class SimulationController : ControllerBase
     [HttpPost("process")]
     public IActionResult CreateProcess([FromBody] CreateProcessRequestDto requestDto)
     {
-        var process = new Process(requestDto.Id, requestDto.Name, requestDto.BurstTime,
-            requestDto.Priority, requestDto.IoRequestAtTick, requestDto.IoBlockingTime);
-
+        var process = ProcessFactory.Create(requestDto);
         _simulation.AddProcess(process);
 
         return Ok(new
