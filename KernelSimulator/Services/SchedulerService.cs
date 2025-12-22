@@ -23,6 +23,13 @@ public class SchedulerService
         _readyProcesses.Remove(nextProcess);
         return nextProcess;
     }
+
+    public void ApplyAgingToWaitingProcesses()
+    {
+        foreach (var process in _readyProcesses)
+            process.ApplyAging();
+    }
+
     public IReadOnlyCollection<Process> GetReadyProcesses()
     {
         return _readyProcesses.AsReadOnly();

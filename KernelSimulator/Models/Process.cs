@@ -27,4 +27,9 @@ public class Process
     public int IoBlockingTime { get; set; }
     public int IoRemainingTime { get; set; }
 
+    public void ApplyAging()
+    {
+        if (Priority > 0)
+            Priority--;
+    }
 }

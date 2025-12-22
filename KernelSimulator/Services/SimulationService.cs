@@ -28,69 +28,11 @@ public class SimulationService
     public void Tick()
     {
         CurrentTick++;
-        _logs.Add($"Tick {CurrentTick} started.");
 
         HandleBlockedProcesses();
-
-        if (_currentProcess == null)
-        {
-            _currentProcess = _scheduler.DequeueNextProcess();
-
-            if (_currentProcess == null)
-            {
-                _logs.Add("CPU is idle.");
-                return;
-            }
-
-            _currentProcess.State = ProcessState.Running;
-            _currentQuantumCounter = 0;
-            _logs.Add($"Process {_currentProcess.Name} started running.");
-        }
-
-        _currentProcess.RemainingTime--;
-        _currentQuantumCounter++;
-
-        if (_currentProcess.IoRequestAtTick.HasValue &&
-                CurrentTick == _currentProcess.IoRequestAtTick.Value)
-        {
-            _currentProcess.State = ProcessState.Blocked;
-            _currentProcess.IoRemainingTime = _currentProcess.IoBlockingTime;
-
-            _blockedProcesses.Add(_currentProcess);
-
-            _logs.Add(
-                $"Process {_currentProcess.Name} requested I/O and moved to Blocked."
-            );
-
-            _currentProcess = null;
-            _currentQuantumCounter = 0;
-            return;
-        }
-
-        _logs.Add(
-            $"Process {_currentProcess.Name} executed. Remaining time: {_currentProcess.RemainingTime}"
-        );
-
-        // لو خلصت
-        if (_currentProcess.RemainingTime <= 0)
-        {
-            _currentProcess.State = ProcessState.Finished;
-            _logs.Add($"Process {_currentProcess.Name} finished execution.");
-            _currentProcess = null;
-            _currentQuantumCounter = 0;
-            return;
-        }
-
-        // لو quantum خلص
-        if (_currentQuantumCounter >= _quantum)
-        {
-            _currentProcess.State = ProcessState.Ready;
-            _scheduler.EnqueueProcess(_currentProcess);
-            _logs.Add($"Process {_currentProcess.Name} quantum expired, moved back to queue.");
-
-            _currentProcess = null;
-            _currentQuantumCounter = 0;
-        }
+        ApplyAging();
+        SelectProcessIfNeeded();
+        ExecuteCurrentProcess();
     }
 
     public Process? GetCurrentProcess()
@@ -138,6 +80,28 @@ public class SimulationService
         _currentQuantumCounter = 0;
         _logs.Clear();
         _scheduler.Clear();
+        _blockedProcesses.Clear();
+    }
+    private void ExecuteCurrentProcess()
+    {
+        if (_currentProcess == null)
+            return;
+
+        _currentProcess.RemainingTime--;
+        _currentQuantumCounter++;
+
+        _logs.Add(
+            $"Process {_currentProcess.Name} executed. Remaining time: {_currentProcess.RemainingTime}"
+        );
+
+        if (CheckAndHandleIoRequest())
+            return;
+
+        if (IsProcessCompleted())
+            return;
+
+        if (IsQuantumExpired())
+            HandleQuantumExpiration();
     }
 
     private void HandleBlockedProcesses()
@@ -158,4 +122,80 @@ public class SimulationService
             }
         }
     }
+
+    private bool CheckAndHandleIoRequest()
+    {
+        if (_currentProcess!.IoRequestAtTick.HasValue &&
+            CurrentTick == _currentProcess.IoRequestAtTick.Value)
+        {
+            _currentProcess.State = ProcessState.Blocked;
+            _currentProcess.IoRemainingTime = _currentProcess.IoBlockingTime;
+
+            _blockedProcesses.Add(_currentProcess);
+
+            _logs.Add(
+                $"Process {_currentProcess.Name} requested I/O and moved to Blocked."
+            );
+
+            _currentProcess = null;
+            _currentQuantumCounter = 0;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ApplyAging()
+    {
+        _scheduler.ApplyAgingToWaitingProcesses();
+    }
+
+    private void SelectProcessIfNeeded()
+    {
+        if (_currentProcess != null)
+            return;
+
+        _currentProcess = _scheduler.DequeueNextProcess();
+
+        if (_currentProcess == null)
+        {
+            _logs.Add("CPU is idle.");
+            return;
+        }
+
+        _currentProcess.State = ProcessState.Running;
+        _currentQuantumCounter = 0;
+        _logs.Add($"Process {_currentProcess.Name} started running.");
+    }
+
+    private bool IsProcessCompleted()
+    {
+        if (_currentProcess!.RemainingTime > 0)
+            return false;
+
+        _currentProcess.State = ProcessState.Finished;
+        _logs.Add($"Process {_currentProcess.Name} finished execution.");
+
+        _currentProcess = null;
+        _currentQuantumCounter = 0;
+
+        return true;
+    }
+    private bool IsQuantumExpired()
+    {
+        return _currentQuantumCounter >= _quantum;
+    }
+
+    private void HandleQuantumExpiration()
+    {
+        _currentProcess!.State = ProcessState.Ready;
+        _scheduler.EnqueueProcess(_currentProcess);
+
+        _logs.Add($"Process {_currentProcess.Name} quantum expired, moved back to queue.");
+
+        _currentProcess = null;
+        _currentQuantumCounter = 0;
+    }
+
 }
