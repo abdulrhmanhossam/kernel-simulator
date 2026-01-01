@@ -32,6 +32,10 @@ public class SimulationService
         HandleBlockedProcesses();
         ApplyAging();
         SelectProcessIfNeeded();
+
+        if (ShouldPreemptCurrentProcess())
+            PreemptCurrentProcess();
+
         ExecuteCurrentProcess();
     }
 
@@ -197,5 +201,34 @@ public class SimulationService
         _currentProcess = null;
         _currentQuantumCounter = 0;
     }
+
+    private bool ShouldPreemptCurrentProcess()
+    {
+        if (_currentProcess == null)
+            return false;
+
+        var nextProcess = _scheduler.PeekNextProcess();
+
+        if (nextProcess == null)
+            return false;
+
+        return nextProcess.Priority < _currentProcess.Priority;
+    }
+
+    private void PreemptCurrentProcess()
+    {
+        _currentProcess!.State = ProcessState.Ready;
+        _scheduler.EnqueueProcess(_currentProcess);
+
+        _logs.Add(
+            $"Process {_currentProcess.Name} preempted by higher priority process."
+        );
+
+        _currentProcess = null;
+        _currentQuantumCounter = 0;
+
+        SelectProcessIfNeeded();
+    }
+
 
 }

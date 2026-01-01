@@ -38,4 +38,15 @@ public class SchedulerService
     public int ReadyCount() => _readyProcesses.Count;
 
     public void Clear() => _readyProcesses.Clear();
+
+    public Process? PeekNextProcess()
+    {
+        if (!_readyProcesses.Any())
+            return null;
+
+        return _readyProcesses
+            .OrderBy(p => p.Priority)
+            .First();
+    }
+
 }
