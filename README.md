@@ -57,7 +57,7 @@ Represents a simulated OS process including:
 
 ---
 
-## 4️⃣ Test Scenarios (بديل
+## 4️⃣ Test Scenarios
 
 ### 🔹 Scenario 1: CPU Idle
 - Run Tick
